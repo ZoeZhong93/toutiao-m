@@ -117,7 +117,6 @@ export default {
       })
       // 提交表单请求登录
       try {
-        console.log(user)
         const res = await login(user)
         // res.data.data => { refresh_token: '...', token: '...' }
         this.$store.commit('setUser', res.data.data)
