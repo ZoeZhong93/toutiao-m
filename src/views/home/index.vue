@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <!-- 导航栏 -->
-    <van-nav-bar class="page-nav-bar">
+    <van-nav-bar class="page-nav-bar" fixed>
       <van-button class="search-btn" slot="title" type="info" size="small" round icon="search">搜索</van-button>
     </van-nav-bar>
 
@@ -12,30 +12,65 @@
       通过swipeable属性可以开启滑动切换标签页
      -->
     <van-tabs class="channel-tabs" v-model="active" animated swipeable>
-      <van-tab title="标签 1">内容 1</van-tab>
-      <van-tab title="标签 2">内容 2</van-tab>
-      <van-tab title="标签 3">内容 3</van-tab>
-      <van-tab title="标签 4">内容 4</van-tab>
-      <van-tab title="标签 5">内容 5</van-tab>
-      <van-tab title="标签 6">内容 6</van-tab>
+      <van-tab v-for="channel in channels" :title="channel.name" :key="channel.id">
+        <!-- 频道文章列表 -->
+        <article-list :channel="channel"></article-list>
+      </van-tab>
+      <div slot="nav-right" class="placeholder"></div>
+      <div slot="nav-right" class="hamburger-btn" @click="isChannelEditShow = true">
+        <i class="toutiao toutiao-gengduo"></i>
+      </div>
     </van-tabs>
+    <!-- 频道编辑弹出层 -->
+    <van-popup
+      v-model="isChannelEditShow"
+      closeable
+      close-icon-position="top-left"
+      position="bottom"
+      :style="{ height: '100%' }"
+    >
+      <channel-edit :my-channels="channels" :active.sync="active" @close-popup="isChannelEditShow = false" />
+    </van-popup>
   </div>
 </template>
 
 <script>
+import { getUserChannels } from '@/api/home'
+import ArticleList from './components/article-list'
+import ChannelEdit from './components/channel-edit'
 export default {
   name: 'HomePage',
+  components: {
+    ArticleList,
+    ChannelEdit
+  },
   data () {
     return {
-      active: 0
+      active: 0,
+      channels: [],
+      isChannelEditShow: true
     }
   },
-  methods: {}
+  created () {
+    this.getChannels()
+  },
+  methods: {
+    async getChannels () {
+      try {
+        const { data } = await getUserChannels()
+        this.channels = data.data.channels
+      } catch (err) {
+        this.$toast('获取用户频道失败')
+      }
+    }
+  }
 }
 </script>
 
 <style scoped lang="less">
   .home-container {
+    padding-bottom: 100px;
+    padding-top: 174px;
     /deep/ .van-nav-bar__title {
       max-width: unset;
     }
@@ -52,6 +87,11 @@ export default {
     /deep/ .channel-tabs {
       .van-tabs__wrap {
         height: 82px;
+        position: fixed;
+        top: 92px;
+        left: 0;
+        right: 0;
+        z-index: 1;
       }
       .van-tab {
         border-right: 1px solid #edeff3;
@@ -70,6 +110,34 @@ export default {
         height: 6px;
         background-color: #3296fa;
         bottom: 8px;
+      }
+      .placeholder {
+        flex-shrink: 0;
+        width: 66px;
+        height: 82px;
+      }
+      .hamburger-btn {
+        position: fixed;
+        right: 0;
+        width: 66px;
+        height: 82px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #fff;
+        opacity: 0.902;
+        i.toutiao {
+          font-size: 33px;
+        }
+        &:before {
+          content: "";
+          position: absolute;
+          left: 0;
+          width: 1px;
+          height: 100%;
+          background: url('~@/assets/gradient-gray-line.png');
+          background-size: contain;
+        }
       }
     }
   }
