@@ -2,7 +2,7 @@
   <div class="home-container">
     <!-- 导航栏 -->
     <van-nav-bar class="page-nav-bar" fixed>
-      <van-button class="search-btn" slot="title" type="info" size="small" round icon="search">搜索</van-button>
+      <van-button class="search-btn" slot="title" type="info" size="small" round icon="search" to="/search">搜索</van-button>
     </van-nav-bar>
 
     <!-- 频道列表 -->
@@ -50,7 +50,7 @@ export default {
     return {
       active: 0,
       channels: [],
-      isChannelEditShow: true
+      isChannelEditShow: false
     }
   },
   created () {
