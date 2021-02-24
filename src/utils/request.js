@@ -16,13 +16,15 @@ const request = axios.create({
   baseURL: 'http://ttapi.research.itcast.cn', // 基础地址
   // baseURL: 'http://toutiao-app.itheima.net/' // 备用接口基础地址
   // transformResponse允许自定义原始的响应数据（字符串）
+  // data：后端返回的原始数据，说白了就是JSON格式的字符串
   transformResponse: [function (data) {
     try {
       // 如果转换成功则返回转换的数据结果
       return JSONBig.parse(data)
     } catch (error) {
       // 如果转换失败，则包装为统一数据格式并返回
-      return { data }
+      // return { data }
+      return data
     }
   }]
 })

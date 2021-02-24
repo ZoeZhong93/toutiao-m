@@ -11,7 +11,7 @@
 
     <div class="main-wrap">
       <!-- 加载中 -->
-      <div class="loading-wrap">
+      <div v-if="loading" class="loading-wrap">
         <van-loading
           color="#3296fa"
           vertical
@@ -20,9 +20,9 @@
       <!-- /加载中 -->
 
       <!-- 加载完成-文章详情 -->
-      <div class="article-detail">
+      <div v-else-if="article.title" class="article-detail">
         <!-- 文章标题 -->
-        <h1 class="article-title">这是文章标题</h1>
+        <h1 class="article-title">{{ article.title }}</h1>
         <!-- /文章标题 -->
 
         <!-- 用户信息 -->
@@ -32,44 +32,54 @@
             slot="icon"
             round
             fit="cover"
-            src="https://img.yzcdn.cn/vant/cat.jpeg"
+            :src="article.aut_photo"
           />
-          <div slot="title" class="user-name">黑马头条号</div>
-          <div slot="label" class="publish-date">14小时前</div>
+          <div slot="title" class="user-name">{{ article.aut_name }}</div>
+          <div slot="label" class="publish-date">{{ article.pubdate | relativeTime }}</div>
           <van-button
+            v-if="article.is_followed"
+            :loading="isFollowLoading"
+            class="follow-btn"
+            round
+            size="small"
+            @click="onFollow"
+          >已关注</van-button>
+          <van-button
+            v-else
+            :loading="isFollowLoading"
             class="follow-btn"
             type="info"
             color="#3296fa"
             round
             size="small"
             icon="plus"
+            @click="onFollow"
           >关注</van-button>
-          <!-- <van-button
-            class="follow-btn"
-            round
-            size="small"
-          >已关注</van-button> -->
         </van-cell>
         <!-- /用户信息 -->
 
         <!-- 文章内容 -->
-        <div class="article-content">这是文章内容</div>
+        <div
+          v-html="article.content"
+          class="article-content markdown-body"
+          ref="article-content"
+        ></div>
         <van-divider>正文结束</van-divider>
       </div>
       <!-- /加载完成-文章详情 -->
 
       <!-- 加载失败：404 -->
-      <div class="error-wrap">
+      <div v-else-if="errStatus === 404" class="error-wrap">
         <van-icon name="failure" />
         <p class="text">该资源不存在或已删除！</p>
       </div>
       <!-- /加载失败：404 -->
 
       <!-- 加载失败：其它未知错误（例如网络原因或服务端异常） -->
-      <div class="error-wrap">
+      <div v-else class="error-wrap">
         <van-icon name="failure" />
         <p class="text">内容加载失败！</p>
-        <van-button class="retry-btn">点击重试</van-button>
+        <van-button class="retry-btn" @click="loadArticle">点击重试</van-button>
       </div>
       <!-- /加载失败：其它未知错误（例如网络原因或服务端异常） -->
     </div>
@@ -101,18 +111,22 @@
   </div>
 </template>
 <script>
-import { getArticleById } from '@/api/article'
+import { getArticleById, addFollow, deleteFollow } from '@/api/article'
+import { ImagePreview } from 'vant'
 export default {
   name: 'ArticleIndex',
   props: {
     articleId: {
-      type: [Number, String],
+      type: [Number, String, Object],
       required: true
     }
   },
   data () {
     return {
-      article: {}
+      article: {},
+      loading: true, // 加载中的loading状态
+      errStatus: 0, // 失败的状态码
+      isFollowLoading: false // 关注/取消关注按钮的loading状态
     }
   },
   created () {
@@ -122,16 +136,67 @@ export default {
     async loadArticle () {
       try {
         const { data } = await getArticleById(this.articleId)
+        // 数据驱动视图这件事儿不是立即的
         this.article = data.data
-        console.log(this.article)
+        // 初始化图片点击预览
+        setTimeout(() => {
+          // console.log(this.$refs['article-content'])
+          this.previewImage()
+        }, 0)
       } catch (error) {
+        if (error.response && error.response.status === 404) {
+          this.errStatus = 404
+        }
         console.log(error)
       }
+      // 无论成功还是失败都需要关闭loading
+      this.loading = false
+    },
+    previewImage () {
+      // 得到所有的img节点
+      const articleContent = this.$refs['article-content']
+      const imgs = articleContent.querySelectorAll('img')
+      const images = []
+      imgs.forEach((img, index) => {
+        images.push(img.src)
+        img.onclick = () => {
+          ImagePreview({
+            images, // 预览的图片地址数组
+            startPosition: index// 起始位置，从0开始
+          })
+        }
+      })
+    },
+    async onFollow () {
+      // 开启按钮的loading状态
+      this.isFollowLoading = true
+      try {
+        // 判断是否已关注
+        if (this.article.is_followed) {
+          // 如果是已关注，则取消关注
+          await deleteFollow(this.article.aut_id)
+        } else {
+          // 未关注，则做关注操做
+          await addFollow(this.article.aut_id)
+        }
+
+        // 更新视图
+        this.article.is_followed = !this.article.is_followed
+      } catch (error) {
+        let message = '操作失败，请重试！'
+        if (error.response && error.response.status === 400) {
+          message = '你不能关注你自己！'
+        }
+        this.$toast(message)
+      }
+      // 关闭按钮的loading状态
+      this.isFollowLoading = false
     }
   }
 }
 </script>
 <style scoped lang="less">
+  @import './github-markdown.css';
   .article-container {
     .main-wrap {
       position: fixed;
